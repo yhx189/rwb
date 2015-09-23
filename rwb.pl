@@ -480,6 +480,7 @@ if ($action eq "invite-user") {
 
 if ($action eq "give-opinion-data") { 
   print h2("Giving Location Opinion Data Is Unimplemented");
+  # TODO
 }
 
 if ($action eq "give-cs-ind-data") { 
