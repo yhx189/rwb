@@ -45,6 +45,7 @@ my @sqloutput=();
 #
 use strict;
 
+
 # The CGI web generation stuff
 # This helps make it easy to generate active HTML content
 # from Perl
@@ -77,8 +78,8 @@ use Time::ParseDate;
 #
 # You need to override these for access to your database
 #
-my $dbuser="pdinda";
-my $dbpasswd="pdinda";
+my $dbuser="yhx189";
+my $dbpasswd="ztyLrzD18";
 
 
 #
@@ -310,6 +311,8 @@ if ($action eq "login") {
   }
 }
 
+my $cgi = CGI->new();
+my $FEC_cycle = $cgi->param('FEC');
 
 
 #
@@ -338,8 +341,8 @@ if ($action eq "base") {
   # And something to color (Red, White, or Blue)
   #
   print "<div id=\"color\" style=\"width:100\%; height:10\%\"></div>";
-
   #
+  
   #
   # And a map which will be populated later
   #
@@ -357,12 +360,20 @@ if ($action eq "base") {
     # invisible otherwise
     print "<div id=\"data\" style=\"display: none;\"></div>";
   }
-
-
+ 
 # height=1024 width=1024 id=\"info\" name=\"info\" onload=\"UpdateMap()\"></iframe>";
   
+ print start_form(-name=>'FEC'),     
+	"FEC cycle:",textfield(-name=>'FEC'),	p,
+	      hidden(-name=>'run',default=>['1']),
+		submit,
+		  end_form;
+  print checkbox(-name=>'check_committee', -checked=>1,-value=>'ON',-label=>'COMMITTEE');
+  print checkbox(-name=>'check_individual', -checked=>1,-value=>'OFF',-label=>'INDIVIDUAL');
+  print checkbox(-name=>'check_candidate', -checked=>1,-value=>'OFF',-label=>'CANDIDATE');
 
-  #
+
+#
   # User mods
   #
   #
@@ -414,20 +425,24 @@ if ($action eq "near") {
   my $longsw = param("longsw");
   my $whatparam = param("what");
   my $format = param("format");
-  my $cycle = param("cycle");
+  my $cycle = param("FEC");
   my %what;
   
   $format = "table" if !defined($format);
   $cycle = "1112" if !defined($cycle);
-
+ 
   if (!defined($whatparam) || $whatparam eq "all") { 
     %what = ( committees => 1, 
 	      candidates => 1,
 	      individuals =>1,
 	      opinions => 1);
   } else {
-    map {$what{$_}=1} split(/\s*,\s*/,$whatparam);
-  }
+    #map {$what{$_}=1} split(/\s*,\s*/,$whatparam);
+    %what = ( committees => param("check_committee"), 
+	      candidates => param("check_candidate"),
+	      individuals =>param("check_individual"),
+	      opinions => 1);
+}
 	       
 
   if ($what{committees}) { 
