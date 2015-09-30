@@ -133,7 +133,6 @@ if (defined(param("act"))) {
   $action="base";
   $run = 1;
 }
-
 my $dstr;
 
 if (defined(param("debug"))) { 
@@ -363,14 +362,21 @@ if ($action eq "base") {
  
 # height=1024 width=1024 id=\"info\" name=\"info\" onload=\"UpdateMap()\"></iframe>";
   
- print start_form(-name=>'FEC'),     
-	"FEC cycle:",textfield(-name=>'FEC'),	p,
-	      hidden(-name=>'run',default=>['1']),
-		submit,
-		  end_form;
+ print start_form(-name=>'FEC_form'),     
+	"FEC cycle:",textfield('FEC'),	p,
+ 		hidden(-name=>'run',default=>['1']),
+		  submit,
+		    end_form;
   print checkbox(-name=>'check_committee', -checked=>1,-value=>'ON',-label=>'COMMITTEE');
-  print checkbox(-name=>'check_individual', -checked=>1,-value=>'OFF',-label=>'INDIVIDUAL');
-  print checkbox(-name=>'check_candidate', -checked=>1,-value=>'OFF',-label=>'CANDIDATE');
+  print checkbox(-name=>'check_individual', -checked=>0,-value=>'ON',-label=>'INDIVIDUAL');
+  print checkbox(-name=>'check_candidate', -checked=>0,-value=>'ON',-label=>'CANDIDATE');
+  print checkbox(-name=>'check_opinion', -checked=>0,-value=>'ON',-label=>'OPINION');
+  my $FEC = param('FEC');
+  my $check_committee = param('check_committee');
+  my $check_individual = param('check_individual');
+  my $check_candidate = param('check_candidate');
+
+
 
 
 #
@@ -418,33 +424,43 @@ if ($action eq "base") {
 # the client-side javascript will invoke it to get raw data for overlaying on the map
 #
 #
+my $cycle = param('FEC');
+my $latne = param("latne");
+my $longne = param("longne");
+my $latsw = param("latsw");
+my $longsw = param("longsw");
+ 
 if ($action eq "near") {
-  my $latne = param("latne");
-  my $longne = param("longne");
-  my $latsw = param("latsw");
-  my $longsw = param("longsw");
-  my $whatparam = param("what");
-  my $format = param("format");
-  my $cycle = param("FEC");
+  my $latne = param('latne');
+  my $longne = param('longne');
+  my $latsw = param('latsw');
+  my $longsw = param('longsw');
+  my $whatparam = param('what');
+  my $format = param('format');
+  my $cycle = param('FEC');
   my %what;
   
-  $format = "table" if !defined($format);
-  $cycle = "1112" if !defined($cycle);
+  $format = "table" ;#if !defined($format);
+  #$cycle = "1112" if !defined($cycle);
  
   if (!defined($whatparam) || $whatparam eq "all") { 
     %what = ( committees => 1, 
 	      candidates => 1,
 	      individuals =>1,
 	      opinions => 1);
+    print ("what param NOT defined\n");
   } else {
     #map {$what{$_}=1} split(/\s*,\s*/,$whatparam);
-    %what = ( committees => param("check_committee"), 
-	      candidates => param("check_candidate"),
-	      individuals =>param("check_individual"),
-	      opinions => 1);
+    print ("what param defined");
+    %what = ( committees => param('check_committee'), 
+	      candidates => param('check_candidate'),
+	      individuals =>param('check_individual'),
+	      opinions => param('check_opinion'));
 }
 	       
-
+  print ("cycle:$cycle\n");
+  print ("what: $what{committees}$what{candidates}$what{individuals}$what{opinions}\n");
+  print("location: $latne, $latsw, $longne, $longsw");
   if ($what{committees}) { 
     my ($str,$error) = Committees($latne,$longne,$latsw,$longsw,$cycle,$format);
     if (!$error) {

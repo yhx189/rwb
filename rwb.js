@@ -46,7 +46,6 @@ UpdateMapById = function(id, tag) {
 // first, we slice the string into an array of strings, one per 
 // line / data item
 	var rows  = $("#"+id).html().split("\n");
-
 // then, for each line / data item
 	for (var i=0; i<rows.length; i++) {
 // we slice it into tab-delimited chunks (the fields)
@@ -98,8 +97,8 @@ UpdateMap = function() {
 // commented out...  Those might help with the project...
 //
 	UpdateMapById("committee_data","COMMITTEE");
-	UpdateMapById("candidate_data","CANDIDATE");
-	UpdateMapById("individual_data", "INDIVIDUAL");
+	//UpdateMapById("candidate_data","CANDIDATE");
+	//UpdateMapById("individual_data", "INDIVIDUAL");
 	//UpdateMapById("opinion_data","OPINION");
 
 // When we're done with the map update, we mark the color division as
