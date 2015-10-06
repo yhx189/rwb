@@ -45,7 +45,6 @@ my @sqloutput=();
 #
 use strict;
 
-
 # The CGI web generation stuff
 # This helps make it easy to generate active HTML content
 # from Perl
@@ -53,6 +52,10 @@ use strict;
 # We'll use the "standard" procedural interface to CGI
 # instead of the OO default interface
 use CGI qw(:standard);
+
+#for the unique token
+use Digest::MD5 qw(md5 md5_hex md5_base64);
+use Switch;
 
 
 # The interface to the database.  The interface is essentially
@@ -133,6 +136,7 @@ if (defined(param("act"))) {
   $action="base";
   $run = 1;
 }
+
 my $dstr;
 
 if (defined(param("debug"))) { 
@@ -231,8 +235,8 @@ my @outputcookies;
 #
 if (defined($outputcookiecontent)) { 
   my $cookie=cookie(-name=>$cookiename,
-		    -value=>$outputcookiecontent,
-		    -expires=>($deletecookie ? '-1h' : '+1h'));
+        -value=>$outputcookiecontent,
+        -expires=>($deletecookie ? '-1h' : '+1h'));
   push @outputcookies, $cookie;
 } 
 #
@@ -241,7 +245,7 @@ if (defined($outputcookiecontent)) {
 #
 if (defined($outputdebugcookiecontent)) { 
   my $cookie=cookie(-name=>$debugcookiename,
-		    -value=>$outputdebugcookiecontent);
+        -value=>$outputdebugcookiecontent);
   push @outputcookies, $cookie;
 }
 
@@ -301,17 +305,15 @@ if ($action eq "login") {
   if ($logincomplain or !$run) { 
     print start_form(-name=>'Login'),
       h2('Login to Red, White, and Blue'),
-	"Name:",textfield(-name=>'user'),	p,
-	  "Password:",password_field(-name=>'password'),p,
-	    hidden(-name=>'act',default=>['login']),
-	      hidden(-name=>'run',default=>['1']),
-		submit,
-		  end_form;
+  "Name:",textfield(-name=>'user'), p,
+    "Password:",password_field(-name=>'password'),p,
+      hidden(-name=>'act',default=>['login']),
+        hidden(-name=>'run',default=>['1']),
+    submit,
+      end_form;
   }
 }
 
-my $cgi = CGI->new();
-my $FEC_cycle = $cgi->param('FEC');
 
 
 #
@@ -340,8 +342,8 @@ if ($action eq "base") {
   # And something to color (Red, White, or Blue)
   #
   print "<div id=\"color\" style=\"width:100\%; height:10\%\"></div>";
+
   #
-  
   #
   # And a map which will be populated later
   #
@@ -359,27 +361,12 @@ if ($action eq "base") {
     # invisible otherwise
     print "<div id=\"data\" style=\"display: none;\"></div>";
   }
- 
+
+
 # height=1024 width=1024 id=\"info\" name=\"info\" onload=\"UpdateMap()\"></iframe>";
   
- print start_form(-name=>'FEC_form'),     
-	"FEC cycle:",textfield('FEC'),	p,
- 		hidden(-name=>'run',default=>['1']),
-		  submit,
-		    end_form;
-  print checkbox(-name=>'check_committee', -checked=>1,-value=>'ON',-label=>'COMMITTEE');
-  print checkbox(-name=>'check_individual', -checked=>0,-value=>'ON',-label=>'INDIVIDUAL');
-  print checkbox(-name=>'check_candidate', -checked=>0,-value=>'ON',-label=>'CANDIDATE');
-  print checkbox(-name=>'check_opinion', -checked=>0,-value=>'ON',-label=>'OPINION');
-  my $FEC = param('FEC');
-  my $check_committee = param('check_committee');
-  my $check_individual = param('check_individual');
-  my $check_candidate = param('check_candidate');
 
-
-
-
-#
+  #
   # User mods
   #
   #
@@ -407,6 +394,26 @@ if ($action eq "base") {
     print "<p><a href=\"rwb.pl?act=logout&run=1\">Logout</a></p>";
   }
 
+  # div for election data, with conditional opinion checkbox
+  print "<div id = \"electionData\"><label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Committees\" value=\"committees\">Committees</label><br>
+  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Candidates\" value=\"candidates\">Candidates</label><br>
+  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Individuals\" value=\"individuals\">Individuals</label><br>";
+  if (UserCan($user,"query-opinion-data")) {
+      print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Opinion\" value=\"opinions\">Opinions</label><br>";
+  }
+  print "</div>";
+
+  #cycle information
+  my @rows;
+  eval { 
+    @rows = ExecSQL($dbuser, $dbpasswd, "select distinct cycle from cs339.individual",undef);
+  };
+
+  print "<div id = \"cycleData\">";
+  for my $elem (@rows) { 
+    print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" value=\"" . ${$elem}[0] . "\">" .  ${$elem}[0] . "</label><br>";
+  } 
+  print "</div>";
 }
 
 #
@@ -424,94 +431,238 @@ if ($action eq "base") {
 # the client-side javascript will invoke it to get raw data for overlaying on the map
 #
 #
-my $cycle = param('FEC');
-my $latne = param("latne");
-my $longne = param("longne");
-my $latsw = param("latsw");
-my $longsw = param("longsw");
- 
 if ($action eq "near") {
-  my $latne = param('latne');
-  my $longne = param('longne');
-  my $latsw = param('latsw');
-  my $longsw = param('longsw');
-  my $whatparam = param('what');
-  my $format = param('format');
-  my $cycle = param('FEC');
+  my $latne = param("latne");
+  my $longne = param("longne");
+  my $latsw = param("latsw");
+  my $longsw = param("longsw");
+  my $whatparam = param("what");
+  my $format = param("format");
+  my $cycle = param("cycle");
   my %what;
   
-  $format = "table" ;#if !defined($format);
-  #$cycle = "1112" if !defined($cycle);
- 
+  $format = "table" if !defined($format);
+
   if (!defined($whatparam) || $whatparam eq "all") { 
-    %what = ( committees => 1, 
-	      candidates => 1,
-	      individuals =>1,
-	      opinions => 1);
-    print ("what param NOT defined\n");
-  } else {
-    #map {$what{$_}=1} split(/\s*,\s*/,$whatparam);
-    print ("what param defined");
-    %what = ( committees => param('check_committee'), 
-	      candidates => param('check_candidate'),
-	      individuals =>param('check_individual'),
-	      opinions => param('check_opinion'));
-}
-	       
-  print ("cycle:$cycle\n");
-  print ("what: $what{committees}$what{candidates}$what{individuals}$what{opinions}\n");
-  print("location: $latne, $latsw, $longne, $longsw");
-  if ($what{committees}) { 
-    my ($str,$error) = Committees($latne,$longne,$latsw,$longsw,$cycle,$format);
-    if (!$error) {
-      if ($format eq "table") { 
-	print "<h2>Nearby committees</h2>$str";
-      } else {
-	print $str;
-      }
+      %what = ( committees => 1, 
+          candidates => 1,
+          individuals =>1,
+          opinions => 1);
+    } else {
+      map {$what{$_}=1} split(/\s*,\s*/,$whatparam);
     }
-  }
-  if ($what{candidates}) {
-    my ($str,$error) = Candidates($latne,$longne,$latsw,$longsw,$cycle,$format);
-    if (!$error) {
-      if ($format eq "table") { 
-	print "<h2>Nearby candidates</h2>$str";
-      } else {
-	print $str;
-      }
-    }
-  }
-  if ($what{individuals}) {
-    my ($str,$error) = Individuals($latne,$longne,$latsw,$longsw,$cycle,$format);
-    if (!$error) {
-      if ($format eq "table") { 
-	print "<h2>Nearby individuals</h2>$str";
-      } else {
-	print $str;
-      }
-    }
-  }
+           
+  # putting this outside since this doesn't really use cycle data, don't need to repeat queries across cycles
   if ($what{opinions}) {
-    my ($str,$error) = Opinions($latne,$longne,$latsw,$longsw,$cycle,$format);
-    if (!$error) {
-      if ($format eq "table") { 
-	print "<h2>Nearby opinions</h2>$str";
-      } else {
-	print $str;
+      my ($str,$error) = Opinions($latne,$longne,$latsw,$longsw,"1112",$format);
+      if (!$error) {
+        if ($format eq "table") { 
+            print "<h2>Nearby opinions</h2>$str";
+        } else {
+            print $str;
+        }
+      }
+  }
+
+  $cycle = "1112" if !defined($cycle);
+  my @cycles = split(",",$cycle);
+  for my $indivCycle (@cycles){
+
+    if ($what{committees}) { 
+      my ($str,$error) = Committees($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      if (!$error) {
+        if ($format eq "table") { 
+    print "<h2>Nearby committees</h2>$str";
+        } else {
+    print $str;
+        }
       }
     }
+    if ($what{candidates}) {
+      my ($str,$error) = Candidates($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      if (!$error) {
+        if ($format eq "table") { 
+    print "<h2>Nearby candidates</h2>$str";
+        } else {
+    print $str;
+        }
+      }
+    }
+    if ($what{individuals}) {
+      my ($str,$error) = Individuals($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      if (!$error) {
+        if ($format eq "table") { 
+    print "<h2>Nearby individuals</h2>$str";
+        } else {
+    print $str;
+        }
+      }
+    }
+     #print $indivCycle;
+    my($repStr_a, $repError) = GetRepTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $repStr_a;
+    my($repStr_b, $repError) = GetRepTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $repStr_b;
+  
+    my($demStr_a, $demError) = GetDemTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $demStr_a;
+    my($demStr_b, $demError) = GetDemTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $demStr_b;
+
+    my($indRepTransAmnt, $indRepError) = IndRepTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $indRepTransAmnt;
+    my($indDemTransAmnt, $indDemError) = IndDemTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+    print $indDemTransAmnt;
+ 
   }
+
+  
 }
 
 
-if ($action eq "invite-user") { 
-  print h2("Invite User Functionality Is Unimplemented");
-  # TODO	
+if ($action eq "invite-user") {
+  if (!UserCan($user,"invite-users") && !UserCan($user,"manage-users")) { 
+    print h2('You do not have the required permissions to add users.');
+  } else{
+    print h2("Invite a User");
+    if (!$run) { 
+        print start_form(-name=>'InviteUser'),
+        "Email: ", textfield(-name=>'email'),
+        hidden(-name=>'run',-default=>['1']),
+        hidden(-name=>'act',-default=>['invite-user']),br;
+        
+        my @rows;
+        eval { 
+          @rows = ExecSQL($dbuser, $dbpasswd, "select action from rwb_permissions where name=?",undef,$user);
+        };
+
+        for my $elem (@rows) { print
+          checkbox(
+              -name    => 'permissionBox',
+              -checked => 0,
+              -value   => ${$elem}[0],
+              -label   => ${$elem}[0],
+          );
+        } 
+
+        print br, submit, end_form, hr;
+
+      } else {
+        my $to=param('email');
+        my $from = 'webmaster@yourdomain.com';
+        my $subject = 'Test Email';
+        my @permissions = param('permissionBox');
+        my $permissionString = join(",", @permissions);
+        my $token = int(rand(10000));
+        my $error;
+        $error=TokenAdd($token);
+        while ($error) { 
+          $token = int(rand(10000));
+          $error = TokenAdd($token);
+        }
+        my $message = 'http://murphy.wot.eecs.northwestern.edu/~aly155/rwb/rwb.pl?act=create-account&referrer=' . $user . '&permissions=' .$permissionString . '&token=' . $token;
+        print $message;
+
+        open(MAIL, "|/usr/sbin/sendmail -t");
+
+        # Email Header
+        print MAIL "To: $to\n";
+        print MAIL "From: $from\n";
+        print MAIL "Subject: $subject\n\n";
+        # Email Body
+        print MAIL $message;
+
+        close(MAIL);
+        print "Email Sent Successfully\n";
+      }
+      print "<p><a href=\"rwb.pl?act=base&run=1\">Return</a></p>";
+    }
 }
+
+
+if ($action eq "create-account") {
+  if (!$run) {
+      my $token = url_param('token');
+      if (ValidToken($token)){
+        my $errorToken = TokenDel($token);
+        print start_form(-name=>'CreateAccount'),
+          h2('Create Account'), 
+          "Name: ", textfield(-name=>'name'),
+          p,
+          "Email: ", textfield(-name=>'email'),
+          p,
+          "Password: ", textfield(-name=>'password'),
+          p,
+          hidden(-name=>'run',-default=>['1']),
+          hidden(-name=>'act',-default=>['create-account']),
+          submit,
+          end_form,
+          hr;
+      }else{
+        print "invalid token";
+      }
+    } else {
+      my $name=param('name');
+      my $email=param('email');
+      my $password=param('password');
+      my $referrer = url_param('referrer');
+      my $permissionString = url_param('permissions');
+      my @indivPermissions = split(',',$permissionString);
+      
+      my $errorAdd = UserAdd($name,$password,$email,$referrer);
+      if ($errorAdd) { 
+           print "Can't add user because: $errorAdd";
+      } else {
+           print "Added user $name $email as referred by $referrer\n";
+      }
+
+      for my $perm (@indivPermissions) {
+          my $errorPerm= GiveUserPerm($name,$perm);
+          if ($errorPerm) { 
+              print "Can't add permission to user because: $errorPerm";
+          } else {
+              print "Gave user $name permission $perm\n";
+          }
+      } 
+    
+    }
+  print "<p><a href=\"rwb.pl?act=base&run=1\">Return</a></p>";
+}
+
 
 if ($action eq "give-opinion-data") { 
-  print h2("Giving Location Opinion Data Is Unimplemented");
-  # TODO
+  if (!UserCan($user,"give-opinion-data")) { 
+    print h2('You do not have the required permissions to give your opinion.');
+  } else{
+      print "<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js\" type=\"text/javascript\"></script>";
+      print "<script src=\"http://maps.google.com/maps/api/js?sensor=false\" type=\"text/javascript\"></script>";
+      print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
+      print"<div id = \"opinionData\"><input type=\"radio\" name=\"opinion\" value= \"-1\" > Red<br>
+            <input type=\"radio\" name=\"opinion\" value=\"1\"> Blue<br>
+            <input type=\"radio\" name=\"opinion\" value=\"0\"> Neutral<br>
+            <input type=\"button\" value=\"Submit\" onClick=\"giveOpinion()\"></div>";
+      print "<div id=\"result\"></div>";
+      print hr;
+      print "<p><a href=\"rwb.pl?act=base&run=1\">Return</a></p>";
+  }
+}
+
+#helper function to insert the opinion into the sql database and provide confirmation page
+if ($action eq "insert-opinion-data") { 
+  if (!UserCan($user,"give-opinion-data")) { 
+    print h2('You do not have the required permissions to give your opinion.');
+  } else{
+      my $latitude = param("latitude");
+      my $longitude = param("longitude");
+      my $opinion = param("opinion");
+      my $error;
+      $error = OpinionAdd($user, $opinion, $latitude, $longitude);
+      print "<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js\" type=\"text/javascript\"></script>";
+      print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
+      print $latitude, br, $longitude, br $opinion, br, $error;
+      print hr;
+      print "<p><a href=\"rwb.pl?act=base&run=1\">Return</a></p>";
+  }
 }
 
 if ($action eq "give-cs-ind-data") { 
@@ -532,18 +683,18 @@ if ($action eq "add-user") {
   } else {
     if (!$run) { 
       print start_form(-name=>'AddUser'),
-	h2('Add User'),
-	  "Name: ", textfield(-name=>'name'),
-	    p,
-	      "Email: ", textfield(-name=>'email'),
-		p,
-		  "Password: ", textfield(-name=>'password'),
-		    p,
-		      hidden(-name=>'run',-default=>['1']),
-			hidden(-name=>'act',-default=>['add-user']),
-			  submit,
-			    end_form,
-			      hr;
+      h2('Add User'), 
+      "Name: ", textfield(-name=>'name'),
+      p,
+      "Email: ", textfield(-name=>'email'),
+      p,
+      "Password: (more than 8 characters)", password_field(-name=>'password'),
+      p,
+      hidden(-name=>'run',-default=>['1']),
+      hidden(-name=>'act',-default=>['add-user']),
+      submit,
+      end_form,
+      hr;
     } else {
       my $name=param('name');
       my $email=param('email');
@@ -551,9 +702,9 @@ if ($action eq "add-user") {
       my $error;
       $error=UserAdd($name,$password,$email,$user);
       if ($error) { 
-	print "Can't add user because: $error";
+           print "Can't add user because: $error";
       } else {
-	print "Added user $name $email as referred by $user\n";
+           print "Added user $name $email as referred by $user\n";
       }
     }
   }
@@ -577,22 +728,22 @@ if ($action eq "delete-user") {
       # Generate the add form.
       #
       print start_form(-name=>'DeleteUser'),
-	h2('Delete User'),
-	  "Name: ", textfield(-name=>'name'),
-	    p,
-	      hidden(-name=>'run',-default=>['1']),
-		hidden(-name=>'act',-default=>['delete-user']),
-		  submit,
-		    end_form,
-		      hr;
+  h2('Delete User'),
+    "Name: ", textfield(-name=>'name'),
+      p,
+        hidden(-name=>'run',-default=>['1']),
+    hidden(-name=>'act',-default=>['delete-user']),
+      submit,
+        end_form,
+          hr;
     } else {
       my $name=param('name');
       my $error;
       $error=UserDel($name);
       if ($error) { 
-	print "Can't delete user because: $error";
+  print "Can't delete user because: $error";
       } else {
-	print "Deleted user $name\n";
+  print "Deleted user $name\n";
       }
     }
   }
@@ -617,28 +768,28 @@ if ($action eq "add-perm-user") {
       # Generate the add form.
       #
       print start_form(-name=>'AddUserPerm'),
-	h2('Add User Permission'),
-	  "Name: ", textfield(-name=>'name'),
-	    "Permission: ", textfield(-name=>'permission'),
-	      p,
-		hidden(-name=>'run',-default=>['1']),
-		  hidden(-name=>'act',-default=>['add-perm-user']),
-		  submit,
-		    end_form,
-		      hr;
+  h2('Add User Permission'),
+    "Name: ", textfield(-name=>'name'),
+      "Permission: ", textfield(-name=>'permission'),
+        p,
+    hidden(-name=>'run',-default=>['1']),
+      hidden(-name=>'act',-default=>['add-perm-user']),
+      submit,
+        end_form,
+          hr;
       my ($table,$error);
       ($table,$error)=PermTable();
       if (!$error) { 
-	print "<h2>Available Permissions</h2>$table";
+  print "<h2>Available Permissions</h2>$table";
       }
     } else {
       my $name=param('name');
       my $perm=param('permission');
       my $error=GiveUserPerm($name,$perm);
       if ($error) { 
-	print "Can't add permission to user because: $error";
+  print "Can't add permission to user because: $error";
       } else {
-	print "Gave user $name permission $perm\n";
+  print "Gave user $name permission $perm\n";
       }
     }
   }
@@ -663,28 +814,28 @@ if ($action eq "revoke-perm-user") {
       # Generate the add form.
       #
       print start_form(-name=>'RevokeUserPerm'),
-	h2('Revoke User Permission'),
-	  "Name: ", textfield(-name=>'name'),
-	    "Permission: ", textfield(-name=>'permission'),
-	      p,
-		hidden(-name=>'run',-default=>['1']),
-		  hidden(-name=>'act',-default=>['revoke-perm-user']),
-		  submit,
-		    end_form,
-		      hr;
+      h2('Revoke User Permission'),
+       "Name: ", textfield(-name=>'name'),
+      "Permission: ", textfield(-name=>'permission'),
+        p,
+    hidden(-name=>'run',-default=>['1']),
+      hidden(-name=>'act',-default=>['revoke-perm-user']),
+      submit,
+        end_form,
+          hr;
       my ($table,$error);
       ($table,$error)=PermTable();
       if (!$error) { 
-	print "<h2>Available Permissions</h2>$table";
+  print "<h2>Available Permissions</h2>$table";
       }
     } else {
       my $name=param('name');
       my $perm=param('permission');
       my $error=RevokeUserPerm($name,$perm);
       if ($error) { 
-	print "Can't revoke permission from user because: $error";
+  print "Can't revoke permission from user because: $error";
       } else {
-	print "Revoked user $name permission $perm\n";
+  print "Revoked user $name permission $perm\n";
       }
     }
   }
@@ -734,7 +885,89 @@ print end_html;
 #
 # The main line is finished at this point. 
 # The remainder includes utilty and other functions
-#
+sub IndRepTransAmnt{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_; 
+   my @rows;
+   eval{
+      @rows = ExecSQL($dbuser, $dbpasswd, "select sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmty_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'REP',$cycle,$latsw,$latne,$longsw,$longne);
+   };
+   if($@){
+   	return(undef, $@);
+   }else{
+   	return (MakeRaw("rep_ind_amnt", "ROW", @rows), $@);
+   }
+
+}
+sub IndDemTransAmnt{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_; 
+   my @rows;
+   eval{
+      @rows = ExecSQL($dbuser, $dbpasswd, "select sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmty_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'DEM',$cycle,$latsw,$latne,$longsw,$longne);
+   };
+   if($@){
+   	return(undef, $@);
+   }else{
+   	return (MakeRaw("dem_ind_amnt", "ROW", @rows), $@);
+   }
+
+}
+
+sub GetRepTransAmnt_a{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
+   my @rows;
+   eval{
+     @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.committee_master NATURAL JOIN cs339.comm_to_comm NATURAL JOIN cs339.cmte_id_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'REP',$cycle,$latsw,$latne,$longsw,$longne);
+
+   };
+ if($@){
+	  return (undef, $@);
+  } else{
+	  return(MakeRaw("rep_trans_amnt_a", "ROW", @rows),$@);
+  }
+}
+
+
+sub GetRepTransAmnt_b{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
+   my @rows;
+   eval{
+     @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.committee_master NATURAL JOIN cs339.comm_to_cand NATURAL JOIN cs339.cmte_id_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'REP',$cycle,$latsw,$latne,$longsw,$longne);
+   };
+ if($@){
+	  return (undef, $@);
+  } else{
+	  return(MakeRaw("rep_trans_amnt_b", "ROW", @rows),$@);
+  }
+}
+
+sub GetDemTransAmnt_a{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
+   my @rows;
+   eval{
+     @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.committee_master NATURAL JOIN cs339.comm_to_comm NATURAL JOIN cs339.cmte_id_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'DEM',$cycle,$latsw,$latne,$longsw,$longne);
+
+   };
+ if($@){
+	  return (undef, $@);
+  } else{
+	  return(MakeRaw("dem_trans_amnt_a", "ROW", @rows),$@);
+  }
+}
+
+
+sub GetDemTransAmnt_b{
+   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
+   my @rows;
+   eval{
+     @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.committee_master NATURAL JOIN cs339.comm_to_cand NATURAL JOIN cs339.cmte_id_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'DEM',$cycle,$latsw,$latne,$longsw,$longne);
+   };
+ if($@){
+	  return (undef, $@);
+  } else{
+	  return(MakeRaw("dem_trans_amnt_b", "ROW", @rows),$@);
+  }
+}
+
 
 
 #
@@ -754,8 +987,8 @@ sub Committees {
   } else {
     if ($format eq "table") { 
       return (MakeTable("committee_data","2D",
-			["latitude", "longitude", "name", "party", "street1", "street2", "city", "state", "zip"],
-			@rows),$@);
+      ["latitude", "longitude", "name", "party", "street1", "street2", "city", "state", "zip"],
+      @rows),$@);
     } else {
       return (MakeRaw("committee_data","2D",@rows),$@);
     }
@@ -780,8 +1013,8 @@ sub Candidates {
   } else {
     if ($format eq "table") {
       return (MakeTable("candidate_data", "2D",
-			["latitude", "longitude", "name", "party", "street1", "street2", "city", "state", "zip"],
-			@rows),$@);
+      ["latitude", "longitude", "name", "party", "street1", "street2", "city", "state", "zip"],
+      @rows),$@);
     } else {
       return (MakeRaw("candidate_data","2D",@rows),$@);
     }
@@ -809,8 +1042,8 @@ sub Individuals {
   } else {
     if ($format eq "table") { 
       return (MakeTable("individual_data", "2D",
-			["latitude", "longitude", "name", "city", "state", "zip", "employer", "amount"],
-			@rows),$@);
+      ["latitude", "longitude", "name", "city", "state", "zip", "employer", "amount"],
+      @rows),$@);
     } else {
       return (MakeRaw("individual_data","2D",@rows),$@);
     }
@@ -836,8 +1069,8 @@ sub Opinions {
   } else {
     if ($format eq "table") { 
       return (MakeTable("opinion_data","2D",
-			["latitude", "longitude", "name", "city", "state", "zip", "employer", "amount"],
-			@rows),$@);
+      ["latitude", "longitude", "name", "city", "state", "zip", "employer", "amount"], 
+      @rows),$@);
     } else {
       return (MakeRaw("opinion_data","2D",@rows),$@);
     }
@@ -857,9 +1090,9 @@ sub PermTable {
     return (undef,$@);
   } else {
     return (MakeTable("perm_table",
-		      "2D",
-		     ["Perm"],
-		     @rows),$@);
+          "2D",
+         ["Perm"],
+         @rows),$@);
   }
 }
 
@@ -875,9 +1108,9 @@ sub UserTable {
     return (undef,$@);
   } else {
     return (MakeTable("user_table",
-		      "2D",
-		     ["Name", "Email"],
-		     @rows),$@);
+          "2D",
+         ["Name", "Email"],
+         @rows),$@);
   }
 }
 
@@ -893,9 +1126,9 @@ sub UserPermTable {
     return (undef,$@);
   } else {
     return (MakeTable("userperm_table",
-		      "2D",
-		     ["Name", "Permission"],
-		     @rows),$@);
+          "2D",
+         ["Name", "Permission"],
+         @rows),$@);
   }
 }
 
@@ -909,7 +1142,7 @@ sub UserPermTable {
 #
 sub UserAdd { 
   eval { ExecSQL($dbuser,$dbpasswd,
-		 "insert into rwb_users (name,password,email,referer) values (?,?,?,?)",undef,@_);};
+     "insert into rwb_users (name,password,email,referer) values (?,?,?,?)",undef,@_);};
   return $@;
 }
 
@@ -932,7 +1165,7 @@ sub UserDel {
 #
 sub GiveUserPerm { 
   eval { ExecSQL($dbuser,$dbpasswd,
-		 "insert into rwb_permissions (name,action) values (?,?)",undef,@_);};
+     "insert into rwb_permissions (name,action) values (?,?)",undef,@_);};
   return $@;
 }
 
@@ -945,7 +1178,7 @@ sub GiveUserPerm {
 #
 sub RevokeUserPerm { 
   eval { ExecSQL($dbuser,$dbpasswd,
-		 "delete from rwb_permissions where name=? and action=?",undef,@_);};
+     "delete from rwb_permissions where name=? and action=?",undef,@_);};
   return $@;
 }
 
@@ -986,7 +1219,66 @@ sub UserCan {
 }
 
 
+##################### ADDED SUBS #####################
 
+#
+# Add a token
+# returns false on success, $error string on failure
+# 
+sub TokenAdd { 
+  eval { ExecSQL($dbuser,$dbpasswd,
+     "insert into rwb_tokens (token) values (?)",undef,@_);};
+  return $@;
+}
+
+#
+# Delete a token
+# returns false on success, $error string on failure
+# 
+sub TokenDel { 
+  eval {ExecSQL($dbuser,$dbpasswd,"delete from rwb_tokens where token=?", undef, @_);};
+  return $@;
+}
+
+#
+#
+# Check to see if token exists
+#
+# $ok = ValidToken($token)
+#
+#
+sub ValidToken {
+  my @col;
+  eval {@col=ExecSQL($dbuser,$dbpasswd, "select count(*) from rwb_tokens where token=?","COL", @_);};
+  if ($@) { 
+    return 0;
+  } else {
+    return $col[0]>0;
+  }
+}
+
+#
+# Add an opinion
+# returns false on success, $error string on failure
+# 
+sub OpinionAdd { 
+  eval { ExecSQL($dbuser,$dbpasswd,
+     "insert into rwb_opinions (submitter,color,latitude,longitude) values (?,?,?,?)",undef,@_);};
+  return $@;
+}
+
+# check to see if user has registered an opinion - might not need to use this function
+sub OpinionExists {
+  my @col;
+  eval {@col=ExecSQL($dbuser,$dbpasswd, "select count(*) from rwb_opinions where submitter=?","COL", @_);};
+  if ($@) { 
+    return 0;
+  } else {
+    return $col[0]>0;
+  }
+}
+
+################### END ADDED SUBS ###################
 
 
 #

@@ -157,7 +157,19 @@ create table rwb_opinions (
   latitude number not null,
   longitude number not null
 );
-
+--
+--
+-- Tokens
+--
+create table rwb_tokens (
+--
+--token must be unique
+--
+  token number not null unique
+--
+);
+--
+--
 --
 -- Create a set of actions
 --
