@@ -32,7 +32,7 @@ $(document).ready(function() {
 
 // Global variables
 var map, usermark, markers = [],
-dataString = "",
+
 // UpdateMapById draws markers of a given category (id)
 // onto the map using the data for that id stashed within 
 // the document.
@@ -86,33 +86,30 @@ ClearMarkers = function() {
 UpdateMap = function() {
 // We're consuming the data, so we'll reset the "color"
 // division to white and to indicate that we are updating
+
 	var color = $("#color");
-	color.css("background-color", "white")
+ 	color.css("background-color", "white")
 		.html("<b><blink>Updating Display...</blink></b>");
 
 // Remove any existing data markers from the map
 	ClearMarkers();
 
+	
 // Then we'll draw any new markers onto the map, by category
 // Note that there additional categories here that are 
 // commented out...  Those might help with the project...
 //
-	if(dataString.indexOf("committees") > -1){
-		UpdateMapById("committee_data","COMMITTEE");
-	}
+	UpdateMapById("committee_data","COMMITTEE");
+	//UpdateMapById("candidate_data","CANDIDATE");
+	//UpdateMapById("individual_data", "INDIVIDUAL");
+	//UpdateMapById("opinion_data","OPINION");
 
-	if(dataString.indexOf("candidates") > -1){
-		UpdateMapById("candidate_data","CANDIDATE");
-	}
-	if(dataString.indexOf("individuals") > -1){
-		UpdateMapById("individual_data", "INDIVIDUAL");
-	}
-	if(dataString.indexOf("opinions") > -1 ){
-		UpdateMapById("opinion_data","OPINION");
-	}
 // When we're done with the map update, we mark the color division as
 // Ready.
 	color.html("Ready");
+
+// The hand-out code doesn't actually set the color according to the data
+// (that's the student's job), so we'll just assign it a random color for now
 	var repAmnt  = $("#rep_trans_amnt_a").html().split("\n");
 	var rep;
 	if(isNaN(repAmnt[0].split("\t")[0])){
@@ -142,58 +139,15 @@ UpdateMap = function() {
  	}
 
 
+        document.getElementById('test').innerHTML = rep;
 	
-        if(dataString.indexOf("committees") > -1){  	
-		if (dem > rep) {
-			color.css("background-color", "blue");
-		} else if (dem < rep){
-			color.css("background-color", "red");
-		} else {
-			color.css("background-color", "white");
-		}
+	
+	if (dem > rep) {
+		color.css("background-color", "blue");
+	} else {
+		color.css("background-color", "red");
 	}
-	if(dataString.indexOf("individuals") > -1){
-		var repIndAmnt  = $("#rep_ind_amnt").html().split("\n"); 
-		if(isNaN(repIndAmnt[0].split("\t")[0])){
-			repIndAmnt = 0;
-		} else{
-			repIndAmnt = repIndAmnt[0].split("\t")[0];
-		}
-		var demIndAmnt  = $("#dem_ind_amnt").html().split("\n"); 
-		if(isNaN(demIndAmnt[0].split("\t")[0])){
-			demIndAmnt = 0;
-		} else{
-			demIndAmnt = demIndAmnt[0].split("\t")[0];
-		}
-
-		if(demIndAmnt > repIndAmnt){
-			color.css("background-color", "blue");
-		} else if (demIndAmnt < repIndAmnt){
-			color.css("background-color", "red");  
-		} else{
-			color.css("background-color", "white");  
-		}
-	}
-	if(dataString.indexOf("opinions") > -1){ 
-		var rows  = $("#opinion_data").html().split("\n");
-		var mean_color = 0;
-		for (var i=0; i<rows.length; i++) {
-			var cols = rows[i].split("\t"),
-				lat = cols[0],
-				long = cols[1],
-				opinions = cols[2];
-			mean_color = mean_color + opinions;
-		}
-		if(mean_color > 0){
-			color.css("background-color", "blue");  
-		} else if (mean_color < 0){
-			color.css("background-color", "read");  
-		} else{
-			color.css("background-color", "white");  
-		}
-
-
-	}
+        
 },
 
 //
@@ -235,9 +189,8 @@ ViewShift = function() {
 // the browser will call us back at the function NewData (given above)
 
 	//getting the relevant data from the html form (candidate, individual, committee)
-	//var dataString = "";
-    dataString = "";
-    var electionData = document.getElementById('electionData');
+	var dataString = "";
+	var electionData = document.getElementById('electionData');
     var dataSelected = electionData.getElementsByTagName('input');
     for (var i = 0; i < dataSelected.length; i++) {
     	if(dataSelected[i].checked){
@@ -340,39 +293,3 @@ Start = function(location) {
 //
 	navigator.geolocation.watchPosition(Reposition);
 };
-
-function giveOpinion(){
-	navigator.geolocation.getCurrentPosition(giveOpinionHelper);
-};
-
-function giveOpinionHelper(location){
-	var latitude = location.coords.latitude;
-	var longitude = location.coords.longitude;
-
-	console.log(latitude);
-	console.log(longitude);
-
-	var opinion = 0;
-	var radios = document.getElementsByName('opinion');
-	for (var i = 0, length = radios.length; i < length; i++) {
-	    if (radios[i].checked) {
-	        opinion = radios[i].value;
-	        break;
-	    }
-	};
-
-	$.get("rwb.pl",
-		{
-			act:	"insert-opinion-data",
-			latitude: latitude,
-			longitude:	longitude,
-			opinion: opinion
-		}, callBackAfterGivingOpinion);
-};
-
-function callBackAfterGivingOpinion(data){
-	$("#result").html(data);
-	console.log(data);
-	console.log("callback entered");
-};
-
