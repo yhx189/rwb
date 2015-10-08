@@ -889,7 +889,7 @@ sub IndRepTransAmnt{
    my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_; 
    my @rows;
    eval{
-      @rows = ExecSQL($dbuser, $dbpasswd, "select sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmty_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'REP',$cycle,$latsw,$latne,$longsw,$longne);
+      @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'REP',$cycle,$latsw,$latne,$longsw,$longne);
    };
    if($@){
    	return(undef, $@);
@@ -902,7 +902,7 @@ sub IndDemTransAmnt{
    my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_; 
    my @rows;
    eval{
-      @rows = ExecSQL($dbuser, $dbpasswd, "select sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmty_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'DEM',$cycle,$latsw,$latne,$longsw,$longne);
+      @rows = ExecSQL($dbuser, $dbpasswd, "select distinct sum(TRANSACTION_AMNT) from cs339.individual NATURAL JOIN cs339.committee_master NATURAL JOIN cs339.ind_to_geo WHERE cmte_pty_affiliation=? and cycle=? and latitude>? and latitude<? and longitude>? and longitude<?", "ROW", 'DEM',$cycle,$latsw,$latne,$longsw,$longne);
    };
    if($@){
    	return(undef, $@);

@@ -165,7 +165,7 @@ UpdateMap = function() {
 		} else{
 			demIndAmnt = demIndAmnt[0].split("\t")[0];
 		}
-
+		//alert("dem:" + demIndAmnt + " rep:" + repIndAmnt);
 		if(demIndAmnt > repIndAmnt){
 			color.css("background-color", "blue");
 		} else if (demIndAmnt < repIndAmnt){
@@ -182,12 +182,15 @@ UpdateMap = function() {
 				lat = cols[0],
 				long = cols[1],
 				opinions = cols[2];
-			mean_color = mean_color + opinions;
+			if(isNaN(Number(opinions))){
+				break;
+			}
+			mean_color = mean_color + Number(opinions);
 		}
 		if(mean_color > 0){
 			color.css("background-color", "blue");  
 		} else if (mean_color < 0){
-			color.css("background-color", "read");  
+			color.css("background-color", "red");  
 		} else{
 			color.css("background-color", "white");  
 		}
