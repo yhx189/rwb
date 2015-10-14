@@ -45,7 +45,10 @@ UpdateMapById = function(id, tag) {
 // 
 // first, we slice the string into an array of strings, one per 
 // line / data item
-	var rows  = $("#"+id).html().split("\n");
+
+	if($("[id = "+id+"]")){
+	$("[id = "+id+"]").each(function(){
+	var rows  = $(this).html().split("\n");
 
 // then, for each line / data item
 	for (var i=0; i<rows.length; i++) {
@@ -66,7 +69,10 @@ UpdateMapById = function(id, tag) {
 		}));
 
 	}
+})
+}
 },
+
 
 //
 // ClearMarkers just removes the existing data markers from
@@ -113,71 +119,132 @@ UpdateMap = function() {
 // When we're done with the map update, we mark the color division as
 // Ready.
 	color.html("Ready");
-	var repAmnt  = $("#rep_trans_amnt_a").html().split("\n");
-	var rep;
-	if(isNaN(repAmnt[0].split("\t")[0])){
-		rep = 0;
-	} else{
-	        rep = Number(repAmnt[0].split("\t")[0]);
-        }
-	repAmnt  = $("#rep_trans_amnt_b").html().split("\n");
-	if(isNaN(repAmnt[0].split("\t")[0])){
-		rep = rep;
-	} else{
-		rep = rep + Number(repAmnt[0].split("\t")[0]);
-        }
-
-	var demAmnt  = $("#dem_trans_amnt_a").html().split("\n");
-	var dem;
-	if(isNaN(demAmnt[0].split("\t")[0])){
-	     dem = 0;
-	} else{
-	     dem = Number(demAmnt[0].split("\t")[0]);
-        }
-        demAmnt  = $("#dem_trans_amnt_b").html().split("\n");
-	if(isNaN(demAmnt[0].split("\t")[0])){
-	     dem = dem + 0;
-	} else{
-	     dem = dem + Number(demAmnt[0].split("\t")[0]);
+	/*
+        var rep = 0;
+	if($("#rep_trans_amnt_a")){
+	for(var i =0; i<$("#rep_trans_amnt_a").length; i++){
+		repAmnt  = $("#rep_trans_amnt_a").html().split("\n");
+		
+		var rep;
+		if(isNaN(repAmnt[i].split("\t")[i])){
+			rep += 0;
+		} else{
+		        rep += Number(repAmnt[i].split("\t")[i]);
+	        }
+	    }
+	   for(var i =0; i<$("#rep_trans_amnt_b").length; i++){
+		repAmnt  = $("#rep_trans_amnt_b").html().split("\n");
+		if(isNaN(repAmnt[i].split("\t")[i])){
+			rep = rep;
+		} else{
+			rep = rep + Number(repAmnt[i].split("\t")[i]);
+	        }
+	    }
+    }
+    var dem = 0;
+    if($("#dem_trans_amnt_a")){
+    for(var i =0; i<$("#dem_trans_amnt_a").length; i++){
+		var demAmnt  = $("#dem_trans_amnt_a").html().split("\n");
+		var dem;
+		if(isNaN(demAmnt[i].split("\t")[i])){
+		     dem += 0;
+		} else{
+		     dem += Number(demAmnt[i].split("\t")[i]);
+	        }
+	    }
+	    for(var i =0; i<$("#dem_trans_amnt_b").length; i++){
+	        demAmnt  = $("#dem_trans_amnt_b").html().split("\n");
+		if(isNaN(demAmnt[i].split("\t")[i])){
+		     dem = dem + 0;
+		} else{
+		     dem = dem + Number(demAmnt[i].split("\t")[i]);
+	 	}
  	}
-
-
-	
-        if(dataString.indexOf("committees") > -1){  	
+	}
+	*/	
+        if(dataString.indexOf("committees") > -1){ 
+          var rep = 0, dem = 0;
+          var trans = [];
+          var comm_trans_amnt = $("#comm_trans_amnt").html().split("\n");
+          if(isNaN(comm_trans_amnt[0].split("\t")[0])){
+             trans[0] = 0;
+          }else {
+             trans[0] = Number(comm_trans_amnt[0].split("\t")[0]);
+          }
+           if(isNaN(comm_trans_amnt[0].split("\t")[1])){
+             trans[1] = 0;
+          }else {
+             trans[1] = Number(comm_trans_amnt[0].split("\t")[1]);
+          }
+          if(isNaN(comm_trans_amnt[0].split("\t")[2])){
+             trans[2] = 0;
+          }else {
+             trans[2] = Number(comm_trans_amnt[0].split("\t")[2]);
+          }
+          if(isNaN(comm_trans_amnt[0].split("\t")[3])){
+             trans[3] = 0;
+          }else {
+             trans[3] = Number(comm_trans_amnt[0].split("\t")[3]);
+          }
+          rep = trans[0] + trans[1];
+          dem = trans[2] + trans[3];
+          $("#commSum").remove();
+          $("#summary").append('<tr id="commSum"><td>Committee Spending</td><td>'+dem+'</td><td>'+rep+'</td></tr>');
 		if (dem > rep) {
-			color.css("background-color", "blue");
+			$("#commSum").css("background-color", "blue");
 		} else if (dem < rep){
-			color.css("background-color", "red");
+			$("#commSum").css("background-color", "red");
 		} else {
-			color.css("background-color", "white");
+			$("#commSum").css("background-color", "white");
 		}
 	}
+
 	if(dataString.indexOf("individuals") > -1){
-		var repIndAmnt  = $("#rep_ind_amnt").html().split("\n"); 
-		if(isNaN(repIndAmnt[0].split("\t")[0])){
-			repIndAmnt = 0;
+                var indTransAmnt  = $("#ind_trans_amnt").html().split("\n"); 
+		var rep = 0, dem = 0;
+                var trans = [];
+                if(isNaN(indTransAmnt[0].split("\t")[0])){
+			trans[0] = 0;
 		} else{
-			repIndAmnt = repIndAmnt[0].split("\t")[0];
+			trans[0] = Number(indTransAmnt[0].split("\t")[0]);
 		}
-		var demIndAmnt  = $("#dem_ind_amnt").html().split("\n"); 
-		if(isNaN(demIndAmnt[0].split("\t")[0])){
-			demIndAmnt = 0;
+		 if(isNaN(indTransAmnt[0].split("\t")[1])){
+			trans[1] = 0;
 		} else{
-			demIndAmnt = demIndAmnt[0].split("\t")[0];
+			trans[1] = Number(indTransAmnt[0].split("\t")[1]);
 		}
-		//alert("dem:" + demIndAmnt + " rep:" + repIndAmnt);
-		if(demIndAmnt > repIndAmnt){
-			color.css("background-color", "blue");
-		} else if (demIndAmnt < repIndAmnt){
-			color.css("background-color", "red");  
+
+                rep = trans[0];
+                dem = trans[1];
+                //alert("dem:" + demIndAmnt + " rep:" + repIndAmnt);
+		$("#indSum").remove();
+		$("#summary").append('<tr id="indSum"><td>Independant Spending</td><td>'+dem +'</td><td>'+rep + '</td></tr>');
+		if(dem > rep){
+			$("#indSum").css("background-color", "blue");
+		} else if (dem < rep){
+			$("#indSum").css("background-color", "red");  
 		} else{
-			color.css("background-color", "white");  
+			$("#indSum").css("background-color", "white");  
 		}
 	}
 	if(dataString.indexOf("opinions") > -1){ 
 		var rows  = $("#opinion_data").html().split("\n");
-		var mean_color = 0;
+		var mean_color = 0, cnt = 0;
 		for (var i=0; i<rows.length; i++) {
+			var cols = rows[i].split("\t"),
+				lat = cols[0],
+				long = cols[1],
+				opinions = cols[2];
+                        if(isNaN(Number(opinions))){
+				continue;
+			}
+			mean_color = mean_color + Number(opinions);
+		        cnt = cnt + 1;
+                
+                }
+                mean_color = mean_color / cnt;
+                var dev = 0;
+                for (var i=0; i<rows.length; i++) {
 			var cols = rows[i].split("\t"),
 				lat = cols[0],
 				long = cols[1],
@@ -185,16 +252,28 @@ UpdateMap = function() {
 			if(isNaN(Number(opinions))){
 				break;
 			}
-			mean_color = mean_color + Number(opinions);
+                        var tmp = mean_color -Number(opinions);
+			dev = dev  + Math.pow(tmp,2);
 		}
+                dev = Math.sqrt(dev);
+		$("#opiSum").remove();
+		$("#summary").append('<tr id="opiSum"><td>Opinions given by users</td><td>'+mean_color+'</td><td>'+dev+'</td></tr>');
 		if(mean_color > 0){
+			$("#opiSum").css("background-color", "blue");
+		} else if (mean_color < 0){
+			$("#opiSum").css("background-color", "red");  
+		} else{
+			$("#opiSum").css("background-color", "white");  
+		}
+                /*
+if(mean_color > 0){
 			color.css("background-color", "blue");  
 		} else if (mean_color < 0){
 			color.css("background-color", "red");  
 		} else{
 			color.css("background-color", "white");  
 		}
-
+                */
 
 	}
 },
@@ -239,7 +318,31 @@ ViewShift = function() {
 
 	//getting the relevant data from the html form (candidate, individual, committee)
 	//var dataString = "";
+	if(window.matchMedia("screen and (max-width: 40em)").matches){
     dataString = "";
+    var electionData = document.getElementById('electionDataM');
+    var dataSelected = electionData.getElementsByTagName('input');
+    for (var i = 0; i < dataSelected.length; i++) {
+    	if(dataSelected[i].checked){
+    		dataString += dataSelected[i].value + ",";
+    	}
+	}
+    dataString = dataString.substring(0,dataString.length-1);
+
+    //getting the cycles
+    
+    var cyclesString ="";
+    var cycleData = document.getElementById('cycleDataM');
+    var cyclesSelected = cycleData.getElementsByTagName('input');
+    for (var i = 0; i < cyclesSelected.length; i++) {
+    	if(cyclesSelected[i].checked){
+    		cyclesString += cyclesSelected[i].value + ",";
+    	}
+	}
+	cyclesString = cyclesString.substring(0,cyclesString.length-1);
+	}
+	else{
+		dataString = "";
     var electionData = document.getElementById('electionData');
     var dataSelected = electionData.getElementsByTagName('input');
     for (var i = 0; i < dataSelected.length; i++) {
@@ -260,7 +363,8 @@ ViewShift = function() {
     	}
 	}
 	cyclesString = cyclesString.substring(0,cyclesString.length-1);
-
+	}
+	if(dataString != ""){
 	$.get("rwb.pl",
 		{
 			act:	"near",
@@ -271,7 +375,10 @@ ViewShift = function() {
 			format:	"raw",
 			what:	dataString,
 			cycle: cyclesString
-		}, NewData);
+		}, NewData);}
+	else{
+		$("#color").html("Ready");
+	}
 },
 
 
@@ -281,6 +388,7 @@ ViewShift = function() {
 //
 Reposition = function(pos) {
 // We parse the new location into latitude and longitude
+Foundation.utils.throttle(function(e){ //Throttle reposition for location sensitive mobile browser
 	var lat = pos.coords.latitude,
 		long = pos.coords.longitude;
 
@@ -288,7 +396,7 @@ Reposition = function(pos) {
 // this should trigger the map to call us back at ViewShift()
 	map.setCenter(new google.maps.LatLng(lat,long));
 // ... and set our user's marker on the map to the new position
-	usermark.setPosition(new google.maps.LatLng(lat,long));
+	usermark.setPosition(new google.maps.LatLng(lat,long));}, 60000);
 },
 
 
@@ -333,9 +441,12 @@ Start = function(location) {
 // zooms the map, etc, then our function "ViewShift" (defined above
 // will be called after the map is redrawn
 //
-	google.maps.event.addListener(map,"bounds_changed",ViewShift);
-	google.maps.event.addListener(map,"center_changed",ViewShift);
-	google.maps.event.addListener(map,"zoom_changed",ViewShift);
+	google.maps.event.addListener(map,"bounds_changed", Foundation.utils.throttle(function(e){ ViewShift() }, 1000));
+	google.maps.event.addListener(map,"center_changed", Foundation.utils.throttle(function(e){ ViewShift() }, 1000));
+	google.maps.event.addListener(map,"zoom_changed", Foundation.utils.throttle(function(e){ ViewShift() }, 1000));
+
+
+	$("#map").after('<table id="summary" style="width:100%"><tr><th>Category</th><th>Democrats</th><th>Republicans</th></tr></table> ');
 
 //
 // Finally, tell the browser that if the current location changes, it

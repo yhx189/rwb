@@ -272,13 +272,13 @@ print "<body style=\"height:100\%;margin:0\">";
 #
 # Force device width, for mobile phones, etc
 #
-#print "<meta name=\"viewport\" content=\"width=device-width\" />\n";
+print "<meta name=\"viewport\" content=\"width=device-width\" />\n";
 
 # This tells the web browser to render the page in the style
 # defined in the css file
 #
 print "<style type=\"text/css\">\n\@import \"rwb.css\";\n</style>\n";
-  
+
 
 print "<center>" if !$debug;
 
@@ -324,6 +324,79 @@ if ($action eq "login") {
 #
 #
 if ($action eq "base") { 
+
+  print "<link rel=\"stylesheet\" href=\"css/foundation.css\" />";
+
+
+ print "<div id=\"mobile\">";
+ print "<div class=\"off-canvas-wrap\" data-offcanvas>
+  <div class=\"inner-wrap\">
+    <nav class=\"tab-bar\">
+      <section class=\"middle tab-bar-section\">
+        <h1 class=\"title\">Red White & Blue</h1>
+      </section>
+
+      <section class=\"right-small\">
+        <a class=\"right-off-canvas-toggle menu-icon\" href=\"#\"><span></span></a>
+      </section>
+    </nav>
+
+    <aside class=\"right-off-canvas-menu\">
+      <ul class=\"off-canvas-list\">
+        <div id = \"electionDataM\">
+        <li><label>Flags</label></li>
+        <li><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Committees\" value=\"committees\">Committees</li>
+        <li><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Candidates\" value=\"candidates\">Candidates</li>
+        <li><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Individuals\" value=\"individuals\">Individuals</li>";
+        if (UserCan($user,"query-opinion-data")) {
+            print "<li><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Opinion\" value=\"opinions\">Opinions</li>";
+        }
+        print "</div>";
+        print "<li><label>Cycles</label></li>";
+        print "<div id = \"cycleDataM\">";
+          my @rows;
+            eval { 
+              @rows = ExecSQL($dbuser, $dbpasswd, "select distinct cycle from cs339.individual",undef);
+            };
+          for my $elem (@rows) { 
+              print "<li><input type=\"checkbox\" onClick=\"ViewShift()\" value=\"" . ${$elem}[0] . "\">" .  ${$elem}[0] . "</li>";
+            } 
+            print "</div>";
+          print  "<li><label>User Options</label></li>";
+          if ($user eq "anon") {
+                print "<li><a href=\"rwb.pl?act=login\">login</a></li>";
+              }
+          if (UserCan($user,"give-opinion-data")) {
+            print "<li><a href=\"rwb.pl?act=give-opinion-data\">Give Opinion Of Current Location</a></li>";
+          }
+          if (UserCan($user,"give-cs-ind-data")) {
+            print "<li><a href=\"rwb.pl?act=give-cs-ind-data\">Geolocate Individual Contributors</a></li>";
+          }
+          if (UserCan($user,"manage-users") || UserCan($user,"invite-users")) {
+            print "<li><a href=\"rwb.pl?act=invite-user\">Invite User</a></li>";
+          }
+          if (UserCan($user,"manage-users") || UserCan($user,"add-users")) { 
+            print "<li><a href=\"rwb.pl?act=add-user\">Add User</a></li>";
+          } 
+          if (UserCan($user,"manage-users")) { 
+            print "<li><a href=\"rwb.pl?act=delete-user\">Delete User</a></li>";
+            print "<li><a href=\"rwb.pl?act=add-perm-user\">Add User Permission</a></li>";
+            print "<li><a href=\"rwb.pl?act=revoke-perm-user\">Revoke User Permission</a></li>";
+          }
+          if ($user ne "anon"){
+          print "<li><a href=\"rwb.pl?act=logout&run=1\">Logout</a></li>";}
+     print "</ul>
+    </aside>
+
+    <section class=\"main-section\">
+      <!-- content goes here -->
+    </section>
+
+  <a class=\"exit-off-canvas\"></a>
+
+  </div>
+ </div>";
+ print "</div>";
   #
   # Google maps API, needed to draw the map
   #
@@ -334,8 +407,7 @@ if ($action eq "base") {
   # The Javascript portion of our app
   #
   print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
-
-
+  print  "<script src=\"js/vendor/modernizr.js\"></script>";
 
   #
   #
@@ -370,6 +442,7 @@ if ($action eq "base") {
   # User mods
   #
   #
+  print "<div id=\"boxes\" class=\"row\">";
   if ($user eq "anon") {
     print "<p>You are anonymous, but you can also <a href=\"rwb.pl?act=login\">login</a></p>";
   } else {
@@ -393,7 +466,7 @@ if ($action eq "base") {
     }
     print "<p><a href=\"rwb.pl?act=logout&run=1\">Logout</a></p>";
   }
-
+      print "<div class=\"large-12 columns\">";
   # div for election data, with conditional opinion checkbox
   print "<div id = \"electionData\"><label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Committees\" value=\"committees\">Committees</label><br>
   <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Candidates\" value=\"candidates\">Candidates</label><br>
@@ -402,7 +475,6 @@ if ($action eq "base") {
       print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Opinion\" value=\"opinions\">Opinions</label><br>";
   }
   print "</div>";
-
   #cycle information
   my @rows;
   eval { 
@@ -414,6 +486,16 @@ if ($action eq "base") {
     print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" value=\"" . ${$elem}[0] . "\">" .  ${$elem}[0] . "</label><br>";
   } 
   print "</div>";
+  print "</div>";
+  print "</div>";
+
+ print "<script src=\"js/vendor/jquery.js\"></script>";
+ print "<script type=\"text/javascript\" src=\"js/foundation.min.js\"> </script>";
+ print "<script src=\"js/foundation/foundation.js\"></script>";
+ print  "<script src=\"js/foundation/foundation.offcanvas.js\"></script>";
+ print "<script>";
+ print  "\$(document).foundation();";
+ print "</script>";
 }
 
 #
@@ -470,6 +552,9 @@ if ($action eq "near") {
 
     if ($what{committees}) { 
       my ($str,$error) = Committees($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      my $commTransAmnt = GetCommTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+     print $commTransAmnt;
+     
       if (!$error) {
         if ($format eq "table") { 
     print "<h2>Nearby committees</h2>$str";
@@ -490,6 +575,9 @@ if ($action eq "near") {
     }
     if ($what{individuals}) {
       my ($str,$error) = Individuals($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+        
+      my $indTransAmnt = GetIndTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      print $indTransAmnt;
       if (!$error) {
         if ($format eq "table") { 
     print "<h2>Nearby individuals</h2>$str";
@@ -498,22 +586,8 @@ if ($action eq "near") {
         }
       }
     }
-     #print $indivCycle;
-    my($repStr_a, $repError) = GetRepTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $repStr_a;
-    my($repStr_b, $repError) = GetRepTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $repStr_b;
-  
-    my($demStr_a, $demError) = GetDemTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $demStr_a;
-    my($demStr_b, $demError) = GetDemTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $demStr_b;
-
-    my($indRepTransAmnt, $indRepError) = IndRepTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $indRepTransAmnt;
-    my($indDemTransAmnt, $indDemError) = IndDemTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
-    print $indDemTransAmnt;
- 
+   
+    
   }
 
   
@@ -856,6 +930,7 @@ if ($action eq "revoke-perm-user") {
 
 print "</center>" if !$debug;
 
+
 #
 # Generate debugging output if anything is enabled.
 #
@@ -884,7 +959,58 @@ print end_html;
 
 #
 # The main line is finished at this point. 
-# The remainder includes utilty and other functions
+#
+#The remainder includes utilty and other functions
+
+sub GetCommTransAmnt{ 
+   my ($latne,$longne,$latsw,$longsw,$indivCycle,$format) = @_;
+   my @rows;
+   my ($repStr_a, $repError) = GetRepTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   my($repStr_b, $repError) = GetRepTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   my($demStr_a, $demError) = GetDemTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   my($demStr_b, $demError) = GetDemTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   while($repStr_a eq "" && $repStr_b eq ""){
+      $latne = $latne + 0.1;
+      $longne = $longne + 0.1;
+      $latsw = $latsw - 0.1;
+      $longsw = $longsw - 0.1;
+      ($repStr_a, $repError) = GetRepTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      ($repStr_b, $repError) = GetRepTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   }
+   while($demStr_a eq "" && $demStr_b eq ""){
+      $latne = $latne + 0.1;
+      $longne = $longne + 0.1;
+      $latsw = $latsw - 0.1;
+      $longsw = $longsw - 0.1;
+      ($demStr_a, $demError) = GetDemTransAmnt_a($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+      ($demStr_b, $demError) = GetDemTransAmnt_b($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   }
+
+   @rows = ($repStr_a, $repStr_b,$demStr_a, $demStr_b);
+   return (MakeRaw("comm_trans_amnt", "ROW", @rows));
+}
+sub GetIndTransAmnt{
+   my ($latne,$longne,$latsw,$longsw,$indivCycle,$format) = @_;
+   my @rows;
+   my ($repInd, $repError) = IndRepTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   my ($demInd, $demError) = IndDemTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format);
+   while($repInd eq ""){
+     $latne = $latne + 0.1; 
+     $longne = $longne + 0.1; 
+     $latsw = $latsw - 0.1;  
+     $longsw = $longsw - 0.1; 
+     ($repInd, $repError) = IndRepTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format); 
+   }
+   while($demInd eq ""){
+     $latne = $latne + 0.1; 
+     $longne = $longne + 0.1; 
+     $latsw = $latsw - 0.1;  
+     $longsw = $longsw - 0.1; 
+     ($demInd, $demError) = IndDemTransAmnt($latne,$longne,$latsw,$longsw,$indivCycle,$format); 
+   }
+   @rows = ($repInd, $demInd);
+   return (MakeRaw("ind_trans_amnt", "ROW", @rows));
+}
 sub IndRepTransAmnt{
    my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_; 
    my @rows;
@@ -893,8 +1019,9 @@ sub IndRepTransAmnt{
    };
    if($@){
    	return(undef, $@);
-   }else{
-   	return (MakeRaw("rep_ind_amnt", "ROW", @rows), $@);
+    }else{
+        return( @rows,$@);  
+        #return (MakeRaw("rep_ind_amnt", "ROW", @rows), $@);
    }
 
 }
@@ -907,7 +1034,8 @@ sub IndDemTransAmnt{
    if($@){
    	return(undef, $@);
    }else{
-   	return (MakeRaw("dem_ind_amnt", "ROW", @rows), $@);
+       return( @rows,$@);  
+       #return (MakeRaw("dem_ind_amnt", "ROW", @rows), $@);
    }
 
 }
@@ -922,7 +1050,7 @@ sub GetRepTransAmnt_a{
  if($@){
 	  return (undef, $@);
   } else{
-	  return(MakeRaw("rep_trans_amnt_a", "ROW", @rows),$@);
+	  return( @rows,$@);
   }
 }
 
@@ -936,7 +1064,8 @@ sub GetRepTransAmnt_b{
  if($@){
 	  return (undef, $@);
   } else{
-	  return(MakeRaw("rep_trans_amnt_b", "ROW", @rows),$@);
+      #return(MakeRaw("rep_trans_amnt_b", "ROW", @rows),$@);
+       return (@rows,$@);
   }
 }
 
@@ -950,7 +1079,8 @@ sub GetDemTransAmnt_a{
  if($@){
 	  return (undef, $@);
   } else{
-	  return(MakeRaw("dem_trans_amnt_a", "ROW", @rows),$@);
+      #return(MakeRaw("dem_trans_amnt_a", "ROW", @rows),$@);
+      return (@rows,$@);
   }
 }
 
@@ -964,7 +1094,8 @@ sub GetDemTransAmnt_b{
  if($@){
 	  return (undef, $@);
   } else{
-	  return(MakeRaw("dem_trans_amnt_b", "ROW", @rows),$@);
+      #return(MakeRaw("dem_trans_amnt_b", "ROW", @rows),$@);
+      return (@rows,$@);
   }
 }
 

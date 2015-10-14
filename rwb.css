@@ -12,6 +12,23 @@
  *
  */
 
+@media only screen and (max-width: 40em) {  
+ #boxes{
+  display:none;
+ }
+ .right-off-canvas-menu{
+  height: 100vh;
+ }
+ .right-off-canvas-menu li input{
+  color:white;
+ }
+
+}
+
+@media only screen and (min-width: 40.063em) { 
+ #mobile{
+  display:none;
+ }
 body { background: #f0f0f0; 
        color: black; 
        font-family: Times, serif
@@ -185,4 +202,5 @@ font[size=+2] {
 font[size=+4] {
  font-size: 300%;
  }
+}
 
