@@ -409,19 +409,18 @@ if ($action eq "base") {
   print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
   print  "<script src=\"js/vendor/modernizr.js\"></script>";
 
-  #
-  #
-  # And something to color (Red, White, or Blue)
-  #
-  print "<div id=\"color\" style=\"width:100\%; height:10\%\"></div>";
-
-  #
+ #
   #
   # And a map which will be populated later
   #
   print "<div id=\"map\" style=\"width:100\%; height:80\%\"></div>";
+   #
+  #
+  # And something to color (Red, White, or Blue)
+  #
+  print "<div id=\"color\" style=\"width:100\%; height:5\%\"></div>";
   
-  
+  print "<table id=\"summary\" style=\"width:100\%\"><tr><th>Category</th><th>Democrats</th><th>Republicans</th></tr></table>";
   #
   # And a div to populate with info about nearby stuff
   #
@@ -437,12 +436,35 @@ if ($action eq "base") {
 
 # height=1024 width=1024 id=\"info\" name=\"info\" onload=\"UpdateMap()\"></iframe>";
   
+   print "<div style=\"overflow:auto\">";
+    print "<div style=\"width:50\%;float:left\" class=\"large-12 columns\">";
+  # div for election data, with conditional opinion checkbox
+  print "<div> <p> Select a data type and a cycle you want to see </p></div>";
+  print "<div id = \"electionData\"><label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Committees\" value=\"committees\">Committees</label><br>
+  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Candidates\" value=\"candidates\">Candidates</label><br>
+  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Individuals\" value=\"individuals\">Individuals</label><br>";
+  if (UserCan($user,"query-opinion-data")) {
+      print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Opinion\" value=\"opinions\">Opinions</label><br>";
+  }
+  print "</div>";
+  print "<br>";
+  #cycle information
+  my @rows;
+  eval { 
+    @rows = ExecSQL($dbuser, $dbpasswd, "select distinct cycle from cs339.individual",undef);
+  };
 
-  #
+  print "<div id = \"cycleData\">";
+  for my $elem (@rows) { 
+    print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" value=\"" . ${$elem}[0] . "\">" .  ${$elem}[0] . "</label><br>";
+  } 
+  print "</div>";
+  print "</div>";
+#
   # User mods
   #
   #
-  print "<div id=\"boxes\" class=\"row\">";
+  print "<div style=\"width:50\%\" id=\"boxes\" class=\"row\">";
   if ($user eq "anon") {
     print "<p>You are anonymous, but you can also <a href=\"rwb.pl?act=login\">login</a></p>";
   } else {
@@ -466,29 +488,9 @@ if ($action eq "base") {
     }
     print "<p><a href=\"rwb.pl?act=logout&run=1\">Logout</a></p>";
   }
-      print "<div class=\"large-12 columns\">";
-  # div for election data, with conditional opinion checkbox
-  print "<div id = \"electionData\"><label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Committees\" value=\"committees\">Committees</label><br>
-  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Candidates\" value=\"candidates\">Candidates</label><br>
-  <label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Individuals\" value=\"individuals\">Individuals</label><br>";
-  if (UserCan($user,"query-opinion-data")) {
-      print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" name=\"Opinion\" value=\"opinions\">Opinions</label><br>";
-  }
-  print "</div>";
-  #cycle information
-  my @rows;
-  eval { 
-    @rows = ExecSQL($dbuser, $dbpasswd, "select distinct cycle from cs339.individual",undef);
-  };
 
-  print "<div id = \"cycleData\">";
-  for my $elem (@rows) { 
-    print "<label><input type=\"checkbox\" onClick=\"ViewShift()\" value=\"" . ${$elem}[0] . "\">" .  ${$elem}[0] . "</label><br>";
-  } 
   print "</div>";
   print "</div>";
-  print "</div>";
-
  print "<script src=\"js/vendor/jquery.js\"></script>";
  print "<script type=\"text/javascript\" src=\"js/foundation.min.js\"> </script>";
  print "<script src=\"js/foundation/foundation.js\"></script>";

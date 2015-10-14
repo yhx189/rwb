@@ -446,7 +446,7 @@ Start = function(location) {
 	google.maps.event.addListener(map,"zoom_changed", Foundation.utils.throttle(function(e){ ViewShift() }, 1000));
 
 
-	$("#map").after('<table id="summary" style="width:100%"><tr><th>Category</th><th>Democrats</th><th>Republicans</th></tr></table> ');
+	//$("#map").after('<table id="summary" style="width:100%"><tr><th>Category</th><th>Democrats</th><th>Republicans</th></tr></table> ');
 
 //
 // Finally, tell the browser that if the current location changes, it
